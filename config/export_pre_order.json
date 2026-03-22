@@ -1,0 +1,50 @@
+{
+  "sheets": [
+    {
+      "name": "PO",
+      "first_row": 15,
+      "ref_row": 15,
+      "fields": {
+        "F2": { "type": "date", "format": "%d/%m/%Y" },
+        "F3": { "type": "po_number" }
+      },
+      "columns": [
+        { "col": 1, "type": "formula", "value": "=VLOOKUP(C{row}, 'master data'!$A:$B, 2, 0)" },
+        { "col": 2, "type": "formula", "value": "=VLOOKUP(C{row}, 'master data'!$A:$C, 3, 0)" },
+        { "col": 3, "type": "field", "value": "description" },
+        { "col": 4, "type": "field", "value": "quantity", "cast": "int" },
+        { "col": 5, "type": "formula", "value": "=VLOOKUP(C{row}, 'master data'!$A:$D, 4, 0)" },
+        { "col": 6, "type": "formula", "value": "=D{row}*E{row}" },
+        { "col": 7, "type": "field", "value": "note" }
+      ],
+      "totals": [
+        { "col": 4, "formula": "=SUM(D{start}:D{end})" },
+        { "col": 6, "formula": "=SUM(F{start}:F{end})" }
+      ],
+      "total_search_text": "TOTAL"
+    },
+    {
+      "name": "CI",
+      "first_row": 12,
+      "ref_row": 12,
+      "fields": {
+        "E4": { "type": "date", "format": "%d/%m/%Y" }
+      },
+      "columns": [
+        { "col": 1, "type": "formula", "value": "=VLOOKUP(C{row}, 'master data'!$A:$B, 2, 0)" },
+        { "col": 2, "type": "formula", "value": "=VLOOKUP(C{row}, 'master data'!$A:$C, 3, 0)" },
+        { "col": 3, "type": "field", "value": "description" },
+        { "col": 4, "type": "field", "value": "quantity", "cast": "int" },
+        { "col": 5, "type": "formula", "value": "=VLOOKUP(C{row}, 'master data'!$A:$D, 4, 0)" },
+        { "col": 6, "type": "formula", "value": "=E{row}*D{row}" },
+        { "col": 7, "type": "formula", "value": "=F{row}*{deposit_pct}%" }
+      ],
+      "totals": [
+        { "col": 4, "formula": "=SUM(D{start}:D{end})" },
+        { "col": 6, "formula": "=SUM(F{start}:F{end})" },
+        { "col": 7, "formula": "=SUM(G{start}:G{end})" }
+      ],
+      "total_search_text": "TOTAL"
+    }
+  ]
+}
