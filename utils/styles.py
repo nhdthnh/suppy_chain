@@ -230,9 +230,13 @@ def section_label(icon: str, text: str) -> str:
     </div>
     '''
 
-def divider(margin: str = "2rem 0") -> str:
-    """Refined divider."""
-    return f'<hr style="border:none; border-top:1px solid #f1f5f9; margin:{margin};" />'
+def divider(
+    height: str = "1px",
+    color: str = "#f1f5f9",
+    margin: str = "2rem 0"
+) -> str:
+    """Refined divider with flexible parameters for backward compatibility."""
+    return f'<hr style="border:none; border-top:{height} solid {color}; margin:{margin};" />'
 
 def badge(text: str, is_active: bool = True) -> str:
     """Modern Badge."""
@@ -241,6 +245,14 @@ def badge(text: str, is_active: bool = True) -> str:
     return f'''
     <span style="font-size:0.75rem; font-weight:600; color:{color}; background:{bg}; 
                  padding:4px 12px; border-radius:100px; border:1px solid rgba(0,0,0,0.02);">
+        {text}
+    </span>
+    '''
+
+def mono(text: str, size: str = "0.9rem", color: str = "#64748b") -> str:
+    """Render monospace inline text using JetBrains Mono."""
+    return f'''
+    <span style="font-family:'JetBrains Mono', monospace; font-size:{size}; color:{color};">
         {text}
     </span>
     '''

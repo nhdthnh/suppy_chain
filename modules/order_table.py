@@ -151,14 +151,10 @@ def _build_pre_order_bytes(
     po_date: date,
     vendor: dict,
     deposit_pct: float,
-) -> bytes | None:
-    """Tạo file Excel Pre-Order từ template.
-
-    Returns:
-        bytes của file Excel hoặc None nếu lỗi.
-    """
+) -> tuple[bytes, list[dict]] | None:
+    """Tạo file Excel Pre-Order từ template. Trả về (bytes, sync_data)."""
     if template_path is None or not os.path.exists(template_path):
-        return None
+        return None, []
     try:
         from modules.export_pre_order import build_pre_order_bytes
 
@@ -167,6 +163,68 @@ def _build_pre_order_bytes(
         return build_pre_order_bytes(tmpl, items, po_date, vendor, deposit_pct)
     except Exception as e:
         st.error(f"Lỗi xuất Pre-Order: {e}")
+        return None, []
+
+
+
+
+def _save_to_db(
+    sync_items: list[dict],
+    po_no: str,
+    vendor_id: int,
+) -> dict | None:
+    """Lưu dữ liệu đã tính toán (từ Excel) vào DB."""
+    if not sync_items:
+        return None
+    
+    from db.queries import executemany
+    
+    data = []
+    total_val = 0
+    price_found_count = 0
+    
+    for r in sync_items:
+        price = r.get("Unit Price", 0)
+        amount = r.get("Amount", 0)
+        deposit = r.get("Deposit", 0)
+        qty = r.get("Qty", 0)
+        bc = r.get("Barcode", "")
+        desc = r.get("Description", "")
+
+        if price > 0:
+            price_found_count += 1
+            
+        total_val += amount
+        
+        data.append((
+            bc, desc, qty, price, amount,
+            "none", po_no, deposit, "pending", vendor_id
+        ))
+    
+    sql = """
+        INSERT INTO debt_tracking (
+            barcode, description, qty, unit_price, amount, 
+            payment_type, preorder_no, preorder_amount, preorder_pay_status, vendor_id
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    
+    try:
+        affected = executemany(sql, data)
+        if affected > 0:
+            # Thông báo trạng thái mapping giá
+            st.toast(
+                f"📊 Đã lưu {affected} dòng. "
+                f"({price_found_count}/{len(sync_items)} giá tìm thấy)"
+            )
+            return {
+                "total": total_val, 
+                "deposit": sum(i.get('Deposit', 0) for i in sync_items)
+            }
+        else:
+            st.error("Lỗi: Không có dòng nào được lưu vào Database!")
+            return None
+    except Exception as e:
+        st.error(f"Lỗi hệ thống khi lưu DB: {e}")
         return None
 
 
@@ -271,15 +329,6 @@ def _render_order_info() -> tuple:
     return po_date, vendor_row, short, deposit_pct, template_path
 
 
-def _render_summary(items: list[dict], vendor_short: str, deposit: float) -> None:
-    """Hiển thị tóm tắt bằng các metric cards cao cấp."""
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        st.markdown(metric_card("SẢN PHẨM", str(len(items))), unsafe_allow_html=True)
-    with m2:
-        st.markdown(metric_card("VENDOR", vendor_short), unsafe_allow_html=True)
-    with m3:
-        st.markdown(metric_card("DEPOSIT", f"{int(deposit)}%"), unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -325,7 +374,7 @@ def _render_product_list(items: list[dict]) -> None:
             qty = st.number_input(
                 "qty",
                 min_value=0,
-                value=int(item["quantity"]),
+                value=int(item.get("quantity", 1)),
                 step=1,
                 key=f"qty_{wkey}",
                 label_visibility="collapsed",
@@ -377,7 +426,7 @@ def _render_export_buttons(
     st.markdown(
         "<div style='height:10px'></div>", unsafe_allow_html=True
     )
-    b1, b2, b3, _ = st.columns([2.2, 1.8, 1.4, 4.6])
+    b1, b2, b3, _ = st.columns([2.5, 2.0, 1.5, 4.0])
 
     # ── Pre-Order (PO+CI) ────────────────────────────────
     with b1:
@@ -397,32 +446,87 @@ def _render_export_buttons(
                 st.caption("⚠️ Chọn template để tiếp tục")
             elif st.button(
                 "▶ Chuẩn bị file Pre-Order",
-                help="Tạo file trước khi tải",
+                help="Tạo file và tự động lưu vào Database",
+                key="sc_prepare_btn",
+                use_container_width=True,
             ):
-                with st.spinner("Đang dựng Excel…"):
-                    b = _build_pre_order_bytes(
+                with st.spinner("Đang xử lý & Sync DB…"):
+                    # 1. Tạo Excel + Trích xuất sync data
+                    b, sync_data = _build_pre_order_bytes(
                         template_path,
                         items,
                         po_date,
-                        vendor_row.to_dict()
-                        if vendor_row is not None
-                        else {},
+                        vendor_row.to_dict() if vendor_row is not None else {},
                         deposit_pct,
                     )
+                    
                     if b:
+                        # Success generating file
                         st.session_state["sc_po_bytes"] = b
                         st.session_state["sc_po_params"] = current_params
-                        st.rerun()
+                        
+                        # 2. DEBUG: Hiển thị dữ liệu trích xuất để kiểm tra
+                        st.write("🔍 **Dữ liệu trích xuất từ CI** (Dùng để Sync DB)")
+                        # Đảm bảo hiển thị đúng cột, không bị swap
+                        cols_to_show = ["Description", "Barcode", "Qty", "Unit Price", "Amount", "Deposit"]
+                        st.dataframe(
+                            pd.DataFrame(sync_data)[cols_to_show], 
+                            use_container_width=True,
+                            hide_index=True
+                        )
+                        
+                        found = sum(1 for it in sync_data if it.get('Unit Price', 0) > 0)
+                        st.info(f"📊 Tìm thấy {found}/{len(sync_data)} sản phẩm có đơn giá.")
+                        
+                        # 3. Tự động Sync DB
+                        vid = vendor_row["id"] if vendor_row is not None else 0
+                        result = _save_to_db(sync_data, po_number, int(vid))
+                        
+                        if result:
+                            st.session_state["sc_sync_result"] = result
+                            st.toast(f"✅ Thành công! Đã tạo file & Sync DB.")
+                            st.rerun()
+                        else:
+                            st.error("Dữ liệu chưa được lưu vào Database nên không thể xuất file. "
+                                     "Vui lòng kiểm tra lại bảng giá trong template.")
                     else:
-                        st.caption("⚠ Lỗi tạo file")
+                        st.caption("⚠ Lỗi tạo file Excel")
         else:
             st.download_button(
                 "⬇ Tải Pre-Order (PO+CI)",
                 data=st.session_state["sc_po_bytes"],
                 file_name=f"{po_number}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument"
-                     ".spreadsheetml.sheet",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
             )
+
+    # --- DIAGNOSTIC SECTION ---
+    if template_path and os.path.exists(template_path):
+        with st.expander("🛠️ Kiểm tra dữ liệu Template (Dùng để Debug)", expanded=False):
+            st.caption("Đây là danh sách giá mà hệ thống đọc được từ sheet 'master data'.")
+            try:
+                from modules.export_pre_order import get_master_prices_from_file, normalize_key
+                pm = get_master_prices_from_file(template_path)
+                
+                if pm:
+                    # Show first 20 entries
+                    debug_df = pd.DataFrame([
+                        {"Key hệ thống nhận diện": k, "Giá": v} 
+                        for k, v in list(pm.items())[:20]
+                    ])
+                    st.table(debug_df)
+                    
+                    # Test tool
+                    st.divider()
+                    test_txt = st.text_input("Thử nhập tên sản phẩm để kiểm tra khớp:", "")
+                    if test_txt:
+                        n_key = normalize_key(test_txt)
+                        price = pm.get(n_key, 0)
+                        st.code(f"Key chuẩn hóa: {n_key} | Giá tìm thấy: {price}")
+                else:
+                    st.warning("⚠️ Không tìm thấy sheet 'master data' hoặc sheet đang trống.")
+            except Exception as e:
+                st.error(f"Lỗi debug: {e}")
 
     # ── Plain Excel ───────────────────────────────────────
     with b2:
@@ -432,15 +536,10 @@ def _render_export_buttons(
                 _build_plain_df(items), "PreOrder"
             ),
             file_name=f"plain_{po_number}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument"
-                 ".spreadsheetml.sheet",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
         )
 
-    # ── Xóa tất cả ───────────────────────────────────────
-    with b3:
-        if st.button("🗑 Xóa tất cả"):
-            clear_all()
-            st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -458,12 +557,8 @@ def render() -> None:
 
     st.markdown(divider(), unsafe_allow_html=True)
     
-    # 2. Summary Metrics
+    # 2. Danh sách sản phẩm
     items = st.session_state[_KEY]
-    _render_summary(items, short, deposit_pct)
-    st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
-
-    # 3. Danh sách sản phẩm
     _render_product_list(items)
 
     # 4. Export buttons (chỉ hiện khi có sản phẩm)
