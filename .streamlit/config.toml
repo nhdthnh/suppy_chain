@@ -1,26 +1,25 @@
 # ─── Streamlit Configuration ───────────────────────────────
-# Mặc định Light Mode, high-contrast, font sạch
+# Design system: Emerald (#10b981), Light mode, Inter font
 
 [theme]
-base                   = "light"
-primaryColor           = "#111111"
-backgroundColor        = "#ffffff"
-secondaryBackgroundColor = "#f5f5f5"
-textColor              = "#111111"
-font                   = "sans serif"
+base                     = "light"
+primaryColor             = "#10b981"
+backgroundColor          = "#ffffff"
+secondaryBackgroundColor = "#f8fafc"
+textColor                = "#0f172a"
+font                     = "sans serif"
 
 [server]
-runOnSave              = false
-headless               = true
-enableCORS             = true
-enableXsrfProtection   = true
-maxUploadSize          = 50
+runOnSave            = false
+headless             = true
+enableCORS           = true
+enableXsrfProtection = true
+maxUploadSize        = 50
 
 [browser]
-gatherUsageStats       = false
-serverAddress          = "localhost"
+gatherUsageStats = false
+serverAddress    = "localhost"
 
 [runner]
-# Tắt magic để giảm overhead render
-magicEnabled           = false
-fastReruns             = true
+magicEnabled = false
+fastReruns   = true

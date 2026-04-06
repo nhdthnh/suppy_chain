@@ -1,88 +1,80 @@
-# 🏗️ Kiến trúc ứng dụng — Supply Chain
+# 🏗️ Kiến trúc ứng dụng — Supply Chain v2.5
 
 ## Tổng quan
 
-Ứng dụng Streamlit single-page, sử dụng `st.sidebar` + `st.radio` để tạo navigation.
+Ứng dụng Streamlit single-page, dùng `st.sidebar` + `st.radio` để điều hướng.  
 Dữ liệu lưu trong MySQL, xác thực qua file Excel (`log/log.xlsx`).
+
+---
 
 ## Sơ đồ kiến trúc
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                        app.py                            │
-│             (Entry point + Auth + Routing)                │
+│             (Entry point · Auth · Routing)               │
 ├──────────────┬───────────────────────────────────────────┤
-│              │                                           │
-│   login.py   │        components/sidebar.py              │
-│   (Auth)     │        (Navigation → page_key)            │
-│              │                                           │
+│  login.py    │       components/sidebar.py               │
+│  (Auth)      │       (Navigation → page_key)             │
 ├──────────────┴───────────────────────────────────────────┤
 │                         PAGES                            │
-│  ┌────────────┬────────────┬────────────┬──────────────┐ │
-│  │ search_    │ data_      │ import_    │ export_      │ │
-│  │ order.py   │ browser.py │ excel.py   │ excel.py     │ │
-│  ├────────────┼────────────┼────────────┼──────────────┤ │
-│  │ view_      │ about.py   │            │              │ │
-│  │ templates  │            │            │              │ │
-│  └────────────┴────────────┴────────────┴──────────────┘ │
+│  search_order · data_browser · import_excel              │
+│  export_excel · view_templates · about                   │
 ├──────────────────────────────────────────────────────────┤
-│                        MODULES                           │
-│  ┌────────────────┬────────────────┬───────────────────┐ │
-│  │ product_       │ order_         │ export_pre_       │ │
-│  │ search.py      │ table.py       │ order.py          │ │
-│  └────────────────┴────────────────┴───────────────────┘ │
+│                       MODULES                            │
+│  product_search · order_table · export_pre_order         │
 ├──────────────────────────────────────────────────────────┤
-│  COMPONENTS         │  DB              │  UTILS          │
-│  ┌────────────────┐ │  ┌────────────┐  │  ┌───────────┐ │
-│  │ sidebar.py     │ │  │ connection │  │  │ styles.py │ │
-│  │ filter.py      │ │  │ queries.py │  │  │ excel.py  │ │
-│  └────────────────┘ │  └────────────┘  │  └───────────┘ │
+│  COMPONENTS       │  DB                │  UTILS          │
+│  sidebar.py       │  connection.py     │  styles.py      │
+│  filter.py        │  queries.py        │  excel.py       │
 └──────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## Cấu trúc thư mục
 
 ```
 supply_chain/
 ├── app.py                    # Entry point: config → auth → routing
-├── login.py                  # Authentication: login/logout/auto-login
+├── login.py                  # Authentication: login / logout / auto-login
 │
-├── components/               # UI components tái sử dụng
+├── components/
 │   ├── __init__.py
-│   ├── sidebar.py            # Sidebar navigation (trả về page_key)
+│   ├── sidebar.py            # Sidebar + APP_VERSION constant
 │   └── filter.py             # Bộ lọc bảng DB (auto-detect columns)
 │
-├── pages/                    # Các trang chính (mỗi file = 1 trang)
+├── pages/
 │   ├── search_order.py       # Lập Pre-Order
 │   ├── data_browser.py       # Xem/sửa dữ liệu bảng
 │   ├── import_excel.py       # Import Excel → MySQL
 │   ├── export_excel.py       # Export MySQL → Excel
 │   ├── view_templates.py     # Xem trước templates Excel
-│   └── about.py              # Giới thiệu ứng dụng
+│   └── about.py              # Thông tin ứng dụng + changelog
 │
-├── modules/                  # Business logic modules
+├── modules/
 │   ├── product_search.py     # Tìm kiếm sản phẩm (multiselect)
 │   ├── order_table.py        # Bảng đơn hàng + state management
 │   └── export_pre_order.py   # Ghi sản phẩm vào template Excel
 │
-├── db/                       # Database layer
-│   ├── connection.py         # MySQL connection + reconnect
+├── db/
+│   ├── connection.py         # MySQL connection + cache + reconnect
 │   └── queries.py            # Tất cả SQL queries (cached)
 │
-├── utils/                    # Utilities
-│   ├── styles.py             # Global CSS + HTML helper functions
+├── utils/
+│   ├── styles.py             # GLOBAL_CSS + HTML helper functions
 │   └── excel.py              # Excel read/write helpers
 │
-├── config/                   # Config files
-│   ├── export_pre_order.json # Config template PO+CI sheets
-│   └── export_po.json        # Config template PO sheets
+├── config/
+│   ├── export_pre_order.json # Config sheet PO + CI
+│   └── export_po.json        # Config sheet PO only
 │
-├── templates/                # Excel templates
+├── templates/
 │   └── Pre-Order/
-│       └── <VENDOR>/         # Mỗi vendor 1 folder
-│           └── *.xlsx        # Template files
+│       └── <VENDOR>/         # Mỗi vendor 1 folder (khớp short_name)
+│           └── *.xlsx
 │
-├── scripts/                  # One-time setup & admin scripts
+├── scripts/
 │   ├── create_log_file.py    # Tạo log/log.xlsx ban đầu
 │   ├── manage_users.py       # Quản lý user (CLI)
 │   ├── setup_login.py        # Wizard cài đặt
@@ -90,96 +82,132 @@ supply_chain/
 │   ├── create_debt_tracking.py
 │   ├── create_debt_triggers.py
 │   ├── import_products_eng.py
-│   └── leibu.xlsx
+│   └── debug/                # Scripts debug (không dùng trong production)
+│       ├── check_sheets.py
+│       ├── check_sheets_fast.py
+│       ├── check_template_v4.py
+│       └── debug_template_pd.py
 │
-├── log/                      # User data (gitignored)
+├── log/                      # Gitignored
 │   └── log.xlsx
 │
-├── docs/                     # Documentation
+├── docs/
 │   ├── README.md
-│   ├── ARCHITECTURE.md       # (file này)
+│   ├── USER_GUIDE.md         # Hướng dẫn sử dụng đầy đủ
+│   ├── ARCHITECTURE.md       # File này
 │   └── DEVELOPMENT.md
 │
 └── .streamlit/
-    ├── config.toml           # Streamlit theme + server config
+    ├── config.toml           # Theme + server config
     └── secrets.toml          # MySQL credentials (gitignored)
 ```
 
+---
+
 ## Data Flow
 
-### 1. Request Flow
+### Request Flow
 
 ```
 User → Browser
   → app.py (check auth)
-    → login.py (nếu chưa auth → show login form)
-    → sidebar.render() → page_key
+    → login.py          ← nếu chưa auth → show login form
+    → sidebar.render()  → page_key
     → PAGES[page_key].render()
-      → db/queries.py → MySQL
-      → utils/styles.py (HTML)
+      → db/queries.py   → MySQL
+      → utils/styles.py (HTML helpers)
   → Browser (render)
 ```
 
-### 2. Pre-Order Flow
+### Pre-Order Flow
 
 ```
 search_order.py
-  → product_search.render()
-    → DB: SELECT barcode, description FROM products_eng
-    → st.multiselect → user chọn sản phẩm
-    → order_table.add_product()
+  → product_search.render(filter_result)
+      → DB: SELECT barcode, description FROM products_eng
+      → st.multiselect → user chọn → order_table.add_product()
   → order_table.render()
-    → Hiển thị bảng: barcode | desc | qty | note
-    → Export: export_pre_order.build_pre_order_bytes()
-      → Load template .xlsx
-      → Ghi data + formulas vào PO sheet + CI sheet
-      → Trả về bytes → st.download_button
+      → _render_order_info()   → date / vendor / template / deposit
+      → _render_product_list() → barcode | desc | qty | note | delete
+      → _render_export_buttons()
+          → _build_pre_order_bytes()
+              → export_pre_order.build_pre_order_bytes()
+                  → structural pass (insert rows)
+                  → data pass (ghi formulas + fields)
+                  → sync pass (đọc master data → price_map)
+              → _save_to_db(sync_data, po_number, vendor_id)
+          → st.download_button
 ```
 
-### 3. Import/Export Flow
+### Import / Export Flow
 
 ```
 import_excel.py
-  → Upload .xlsx → chọn sheet → preview
-  → Map cột Excel → cột DB
-  → executemany(INSERT INTO ...) → MySQL
+  → Upload .xlsx → chọn sheet → preview 5 dòng
+  → Mapping cột Excel → cột DB
+  → executemany(INSERT [IGNORE] INTO ...) → MySQL
 
 export_excel.py
-  → [1 bảng] SELECT * → df_to_excel_bytes → download
-  → [nhiều bảng] multi_df_to_excel_bytes → download
-  → [SQL] query(user_sql) → preview → download
+  → Xuất 1 bảng   : SELECT * → df_to_excel_bytes → download
+  → Xuất nhiều    : multi_df_to_excel_bytes → download
+  → SQL tùy chỉnh : query(sql) → preview → download
 ```
+
+---
+
+## Quản lý phiên bản (Version)
+
+Version được định nghĩa **một nơi duy nhất**:
+
+```python
+# components/sidebar.py
+APP_VERSION = "v2.5"
+```
+
+Được import vào `login.py` và `pages/about.py`:
+
+```python
+from components.sidebar import APP_VERSION
+```
+
+---
+
+## Cache Strategy
+
+| Hàm | TTL | Lý do |
+|-----|-----|-------|
+| `list_tables()` | 120s | Schema ít thay đổi |
+| `list_columns()` | 120s | Schema ít thay đổi |
+| `count_rows()` | 30s | Cần tương đối fresh |
+| `fetch_page()` | 20s | Dữ liệu thay đổi thường |
+| `search_products()` | 15s | Cần near-realtime |
+| `_load_product_options()` | 120s | Load lần đầu tốn kém |
+| `_load_vendors()` | 120s | Vendor ít thay đổi |
+
+---
 
 ## Module Chi Tiết
 
 ### `components/sidebar.py`
-- **Input**: Không có
-- **Output**: `page_key` (string) — key của page được chọn
-- **State**: `_sidebar_nav_idx` — index menu đang active
-- **UI**: Logo + DB badge + radio menu + user info + logout
+- **Xuất**: `APP_VERSION` (string) — nguồn sự thật duy nhất cho version
+- **Output**: `page_key` — key page đang active
+- **State**: `_sidebar_nav_idx`
 
 ### `components/filter.py`
-- **Input**: `key_prefix` (string)
 - **Output**: `FilterResult` dataclass
-- **Logic**: Auto-detect cột barcode/description dựa trên tên cột
+- **Logic**: Auto-detect cột barcode/description theo danh sách ứng viên
 
 ### `modules/order_table.py`
-- **State**: `sc_order_items` — list[dict] sản phẩm
-- **State**: `sc_vendor_id`, `sc_po_date`, `sc_deposit_pct`
-- **API**: `add_product()`, `remove_product()`, `clear_all()`, `get_items()`
+- **State keys**: `sc_order_items`, `sc_vendor_id`, `sc_po_date`, `sc_deposit_pct`
+- **Public API**: `add_product()`, `remove_product()`, `clear_all()`, `get_items()`
 
 ### `modules/export_pre_order.py`
-- **Input**: template bytes + items + date + vendor + deposit
 - **Config**: `config/export_pre_order.json`
-- **Output**: bytes file Excel hoàn chỉnh
+- **Pass 1**: Structural — thêm row nếu cần
+- **Pass 2**: Data — ghi fields + formulas
+- **Pass 3**: Sync — đọc `master data` sheet (kể cả ẩn) qua zipfile XML
 
 ### `db/queries.py`
-- Cache TTL: schema=120s, count=30s, search=15s, page=20s
 - `query()` → SELECT → DataFrame
-- `execute()` → INSERT/UPDATE/DELETE → bool
-- `executemany()` → batch INSERT → int
-
-### `utils/styles.py`
-- `GLOBAL_CSS` — CSS toàn cục inject 1 lần
-- `HIDE_SIDEBAR_CSS` — CSS ẩn sidebar (trang login)
-- HTML helpers: `page_header()`, `section_label()`, `metric_card()`, `mono()`, `divider()`, `badge()`
+- `execute()` → DML → bool
+- `executemany()` → batch INSERT → int (rowcount)

@@ -2,10 +2,10 @@
 modules/order_table.py — Bảng Pre-Order.
 
 Chức năng:
-  · Quản lý state danh sách sản phẩm (add/remove/clear)
+  · Quản lý state danh sách sản phẩm (add / remove / clear)
   · UI: date picker, vendor dropdown, deposit %, template selector
   · UI: bảng sản phẩm (barcode, description, qty, note, delete)
-  · Export: xuất file Pre-Order (PO+CI) hoặc plain Excel
+  · Export: xuất file Pre-Order (PO+CI) hoặc plain Excel + lưu DB
 
 State API:
   · add_product(barcode, description)
@@ -29,11 +29,11 @@ from utils.styles import section_label, mono, divider, metric_card, badge
 # CONSTANTS & SESSION KEYS
 # ─────────────────────────────────────────────────────────────
 
-_KEY = "sc_order_items"
-_VENDOR_KEY = "sc_vendor_id"
-_DATE_KEY = "sc_po_date"
+_KEY         = "sc_order_items"
+_VENDOR_KEY  = "sc_vendor_id"
+_DATE_KEY    = "sc_po_date"
 _DEPOSIT_KEY = "sc_deposit_pct"
-_HERE = os.path.dirname(os.path.abspath(__file__))
+_HERE        = os.path.dirname(os.path.abspath(__file__))
 
 
 # ─────────────────────────────────────────────────────────────
@@ -41,13 +41,11 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 # ─────────────────────────────────────────────────────────────
 
 def _init() -> None:
-    """Khởi tạo danh sách sản phẩm nếu chưa có."""
     if _KEY not in st.session_state:
         st.session_state[_KEY] = []
 
 
 def get_items() -> list[dict]:
-    """Lấy danh sách sản phẩm hiện tại."""
     _init()
     return st.session_state[_KEY]
 
@@ -57,15 +55,14 @@ def add_product(barcode: str, description: str) -> None:
     _init()
     if not any(r["barcode"] == barcode for r in st.session_state[_KEY]):
         st.session_state[_KEY].append({
-            "barcode": barcode,
+            "barcode":     barcode,
             "description": description,
-            "quantity": 1,
-            "note": "",
+            "quantity":    1,
+            "note":        "",
         })
 
 
 def remove_product(barcode: str) -> None:
-    """Xóa sản phẩm theo barcode."""
     _init()
     st.session_state[_KEY] = [
         r for r in st.session_state[_KEY] if r["barcode"] != barcode
@@ -73,7 +70,6 @@ def remove_product(barcode: str) -> None:
 
 
 def clear_all() -> None:
-    """Xóa toàn bộ danh sách."""
     st.session_state[_KEY] = []
 
 
@@ -83,7 +79,6 @@ def clear_all() -> None:
 
 @st.cache_data(ttl=120, show_spinner=False)
 def _load_vendors() -> pd.DataFrame:
-    """Load danh sách vendor active từ DB."""
     return query(
         "SELECT id, short_name, name, address, tel, bank_name, "
         "bank_address, swift_code, beneficiary_name, account_number, "
@@ -93,7 +88,6 @@ def _load_vendors() -> pd.DataFrame:
 
 
 def _get_vendor_template_dir(vendor_short_name: str) -> str | None:
-    """Tìm thư mục template cho vendor."""
     base = os.path.join(_HERE, "..", "templates", "Pre-Order")
     if not os.path.exists(base):
         return None
@@ -111,37 +105,40 @@ def _get_vendor_template_dir(vendor_short_name: str) -> str | None:
 # ─────────────────────────────────────────────────────────────
 
 def _render_header() -> None:
-    """Render header row với style mới."""
     st.markdown(
         '''
-        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; 
-                    border: 1px solid #e2e8f0; margin-bottom: 8px;">
-            <div style="display: grid; grid-template-columns: 1.8fr 5fr 1.2fr 2.8fr 0.4fr; gap: 10px;">
-                <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; letter-spacing: 0.05em;">BARCODE</div>
-                <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; letter-spacing: 0.05em;">DESCRIPTION</div>
-                <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; letter-spacing: 0.05em;">QTY</div>
-                <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; letter-spacing: 0.05em;">NOTE</div>
+        <div style="background:#f8fafc;padding:10px 12px;border-radius:8px;
+                    border:1px solid #e2e8f0;margin-bottom:6px;">
+            <div style="display:grid;
+                        grid-template-columns:1.8fr 5fr 1.2fr 2.8fr 0.4fr;
+                        gap:10px;">
+                <div style="font-size:0.72rem;font-weight:700;color:#64748b;
+                            letter-spacing:0.05em;">BARCODE</div>
+                <div style="font-size:0.72rem;font-weight:700;color:#64748b;
+                            letter-spacing:0.05em;">DESCRIPTION</div>
+                <div style="font-size:0.72rem;font-weight:700;color:#64748b;
+                            letter-spacing:0.05em;">QTY</div>
+                <div style="font-size:0.72rem;font-weight:700;color:#64748b;
+                            letter-spacing:0.05em;">NOTE</div>
                 <div></div>
             </div>
         </div>
         ''',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
 
 def _widget_key(item: dict, idx: int) -> str:
-    """Tạo unique key cho widget dựa trên barcode + index."""
     safe = "".join(c if c.isalnum() else "_" for c in str(item["barcode"]))
     return f"{safe}_{idx}"
 
 
 def _build_plain_df(items: list[dict]) -> pd.DataFrame:
-    """Convert danh sách sản phẩm thành DataFrame đơn giản."""
     return pd.DataFrame([{
-        "Barcode": r["barcode"],
+        "Barcode":     r["barcode"],
         "Description": r["description"],
-        "Quantity": r["quantity"],
-        "Note": r.get("note", ""),
+        "Quantity":    r["quantity"],
+        "Note":        r.get("note", ""),
     } for r in items])
 
 
@@ -151,13 +148,12 @@ def _build_pre_order_bytes(
     po_date: date,
     vendor: dict,
     deposit_pct: float,
-) -> tuple[bytes, list[dict]] | None:
+) -> tuple[bytes | None, list[dict]]:
     """Tạo file Excel Pre-Order từ template. Trả về (bytes, sync_data)."""
     if template_path is None or not os.path.exists(template_path):
         return None, []
     try:
         from modules.export_pre_order import build_pre_order_bytes
-
         with open(template_path, "rb") as f:
             tmpl = f.read()
         return build_pre_order_bytes(tmpl, items, po_date, vendor, deposit_pct)
@@ -166,63 +162,48 @@ def _build_pre_order_bytes(
         return None, []
 
 
-
-
 def _save_to_db(
     sync_items: list[dict],
     po_no: str,
     vendor_id: int,
 ) -> dict | None:
-    """Lưu dữ liệu đã tính toán (từ Excel) vào DB."""
+    """Lưu dữ liệu đã tính toán vào bảng debt_tracking."""
     if not sync_items:
         return None
-    
-    from db.queries import executemany
-    
-    data = []
-    total_val = 0
-    price_found_count = 0
-    
-    for r in sync_items:
-        price = r.get("Unit Price", 0)
-        amount = r.get("Amount", 0)
-        deposit = r.get("Deposit", 0)
-        qty = r.get("Qty", 0)
-        bc = r.get("Barcode", "")
-        desc = r.get("Description", "")
 
-        if price > 0:
-            price_found_count += 1
-            
+    from db.queries import executemany
+
+    data = []
+    total_val = 0.0
+
+    for r in sync_items:
+        price   = r.get("Unit Price", 0)
+        amount  = r.get("Amount", 0)
+        deposit = r.get("Deposit", 0)
+        qty     = r.get("Qty", 0)
+        bc      = r.get("Barcode", "")
+        desc    = r.get("Description", "")
         total_val += amount
-        
-        data.append((
-            bc, desc, qty, price, amount,
-            "none", po_no, deposit, "pending", vendor_id
-        ))
-    
+        data.append((bc, desc, qty, price, amount,
+                     "none", po_no, deposit, "pending", vendor_id))
+
     sql = """
         INSERT INTO debt_tracking (
-            barcode, description, qty, unit_price, amount, 
+            barcode, description, qty, unit_price, amount,
             payment_type, preorder_no, preorder_amount, preorder_pay_status, vendor_id
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    
+
     try:
         affected = executemany(sql, data)
         if affected > 0:
-            # Thông báo trạng thái mapping giá
-            st.toast(
-                f"📊 Đã lưu {affected} dòng. "
-                f"({price_found_count}/{len(sync_items)} giá tìm thấy)"
-            )
+            st.toast(f"✅ Đã lưu {affected} dòng vào Database.")
             return {
-                "total": total_val, 
-                "deposit": sum(i.get('Deposit', 0) for i in sync_items)
+                "total":   total_val,
+                "deposit": sum(i.get("Deposit", 0) for i in sync_items),
             }
-        else:
-            st.error("Lỗi: Không có dòng nào được lưu vào Database!")
-            return None
+        st.error("Lỗi: Không có dòng nào được lưu vào Database!")
+        return None
     except Exception as e:
         st.error(f"Lỗi hệ thống khi lưu DB: {e}")
         return None
@@ -238,13 +219,10 @@ def _render_order_info() -> tuple:
     Returns:
         (po_date, vendor_row, short, deposit_pct, template_path)
     """
-    st.markdown(
-        section_label("⚙", "THÔNG TIN PRE-ORDER"), unsafe_allow_html=True
-    )
+    st.markdown(section_label("⚙", "THÔNG TIN PRE-ORDER"), unsafe_allow_html=True)
 
     cfg1, cfg2, cfg3 = st.columns([2, 2, 1.5])
 
-    # Date picker
     with cfg1:
         po_date = st.date_input(
             "📅 Ngày đặt hàng",
@@ -253,18 +231,17 @@ def _render_order_info() -> tuple:
             format="DD/MM/YYYY",
         )
 
-    vendor_row = None
-    short = "VENDOR"
+    vendor_row    = None
+    short         = "VENDOR"
     template_path = None
 
-    # Vendor selector + template selector
     with cfg2:
         vendors_df = _load_vendors()
         if vendors_df.empty:
             st.warning("Chưa có vendor — thêm vào bảng vendors.")
         else:
-            options = vendors_df["short_name"].tolist()
-            sel_idx = st.session_state.get(_VENDOR_KEY, 0)
+            options  = vendors_df["short_name"].tolist()
+            sel_idx  = st.session_state.get(_VENDOR_KEY, 0)
             selected = st.selectbox(
                 "🏢 Vendor",
                 options=options,
@@ -272,16 +249,13 @@ def _render_order_info() -> tuple:
                 key="_vendor_select",
             )
             st.session_state[_VENDOR_KEY] = options.index(selected)
-            vendor_row = vendors_df[
-                vendors_df["short_name"] == selected
-            ].iloc[0]
-            short = (vendor_row.get("short_name") or "VENDOR").strip()
+            vendor_row = vendors_df[vendors_df["short_name"] == selected].iloc[0]
+            short      = (vendor_row.get("short_name") or "VENDOR").strip()
 
-            v_dir = _get_vendor_template_dir(short)
+            v_dir          = _get_vendor_template_dir(short)
             templates_list = (
                 [f for f in os.listdir(v_dir) if f.endswith(".xlsx")]
-                if v_dir
-                else []
+                if v_dir else []
             )
 
             if templates_list:
@@ -293,12 +267,8 @@ def _render_order_info() -> tuple:
                 if sel_tmpl:
                     template_path = os.path.join(v_dir, sel_tmpl)
             else:
-                st.caption(
-                    f"⚠️ Chưa có file template trong "
-                    f"`templates/Pre-Order/{short}`"
-                )
+                st.caption(f"⚠️ Chưa có file template trong `templates/Pre-Order/{short}`")
 
-    # Deposit input
     with cfg3:
         deposit_pct = st.number_input(
             "💰 Deposit (%)",
@@ -311,24 +281,17 @@ def _render_order_info() -> tuple:
             help="Ví dụ: 70 → Deposit = Amount × 70%",
         )
 
-    # PO number preview
     if vendor_row is not None:
-        dd = po_date.strftime("%d")
-        mm = po_date.strftime("%m")
-        yyyy = po_date.strftime("%Y")
-        po_preview = f"{dd}{mm}_{yyyy}_OQR_{short}"
+        po_preview = (
+            f"{po_date.strftime('%d%m')}_{po_date.strftime('%Y')}_OQR_{short}"
+        )
         st.markdown(
-            mono(
-                f"NO. {po_preview}  ·  Deposit: {int(deposit_pct)}%",
-                size="0.9rem",
-                color="#666",
-            ),
+            mono(f"NO. {po_preview}  ·  Deposit: {int(deposit_pct)}%",
+                 size="0.9rem", color="#666"),
             unsafe_allow_html=True,
         )
 
     return po_date, vendor_row, short, deposit_pct, template_path
-
-
 
 
 # ─────────────────────────────────────────────────────────────
@@ -336,7 +299,6 @@ def _render_order_info() -> tuple:
 # ─────────────────────────────────────────────────────────────
 
 def _render_product_list(items: list[dict]) -> None:
-    """Render danh sách sản phẩm (hoặc placeholder nếu trống)."""
     st.markdown(
         section_label("📋", "DANH SÁCH SẢN PHẨM PRE-ORDER"),
         unsafe_allow_html=True,
@@ -351,9 +313,7 @@ def _render_product_list(items: list[dict]) -> None:
     to_remove = None
 
     for idx, item in enumerate(items):
-        c_bc, c_desc, c_qty, c_note, c_del = st.columns(
-            [1.8, 5.0, 1.2, 2.8, 0.4]
-        )
+        c_bc, c_desc, c_qty, c_note, c_del = st.columns([1.8, 5.0, 1.2, 2.8, 0.4])
         wkey = _widget_key(item, idx)
 
         with c_bc:
@@ -364,29 +324,22 @@ def _render_product_list(items: list[dict]) -> None:
 
         with c_desc:
             st.markdown(
-                f'<span style="font-family:\'Source Sans\',sans-serif;'
-                f'font-size:1.05rem;font-weight:500;line-height:1.35;">'
-                f'{item["description"]}</span>',
+                f'<span style="font-family:\'Inter\',sans-serif;font-size:0.95rem;'
+                f'font-weight:500;line-height:1.35;">{item["description"]}</span>',
                 unsafe_allow_html=True,
             )
 
         with c_qty:
             qty = st.number_input(
-                "qty",
-                min_value=0,
-                value=int(item.get("quantity", 1)),
-                step=1,
-                key=f"qty_{wkey}",
-                label_visibility="collapsed",
+                "qty", min_value=0, value=int(item.get("quantity", 1)),
+                step=1, key=f"qty_{wkey}", label_visibility="collapsed",
             )
             item["quantity"] = qty
 
         with c_note:
             note = st.text_input(
-                "note",
-                value=item.get("note", ""),
-                placeholder="Ghi chú…",
-                key=f"note_{wkey}",
+                "note", value=item.get("note", ""),
+                placeholder="Ghi chú…", key=f"note_{wkey}",
                 label_visibility="collapsed",
             )
             item["note"] = note
@@ -394,15 +347,21 @@ def _render_product_list(items: list[dict]) -> None:
         with c_del:
             if st.button("✕", key=f"del_{wkey}", help="Xóa dòng", type="secondary"):
                 to_remove = item["barcode"]
-        
-        # Subtle divider between items
-        st.markdown('<div style="border-bottom: 1px solid #f1f5f9; margin: 4px 0;"></div>', unsafe_allow_html=True)
+
+        st.markdown(
+            '<div style="border-bottom:1px solid #f1f5f9;margin:3px 0;"></div>',
+            unsafe_allow_html=True,
+        )
 
     if to_remove:
         remove_product(to_remove)
         st.rerun()
 
-    st.markdown(f'<div style="margin-top: 12px;">{badge(f"TOTAL: {len(items)} ITEMS", True)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div style="margin-top:12px;">'
+        f'{badge(f"TOTAL: {len(items)} ITEMS", True)}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ─────────────────────────────────────────────────────────────
@@ -417,25 +376,20 @@ def _render_export_buttons(
     template_path: str | None,
     vendor_row,
 ) -> None:
-    """Render các nút export: Pre-Order (PO+CI), Plain Excel, Xóa tất cả."""
-    dd = po_date.strftime("%d")
-    mm = po_date.strftime("%m")
-    yyyy = po_date.strftime("%Y")
-    po_number = f"{dd}{mm}_{yyyy}_OQR_{short}"
-
-    st.markdown(
-        "<div style='height:10px'></div>", unsafe_allow_html=True
+    """Render các nút: Chuẩn bị Pre-Order, Xuất plain Excel, Xóa tất cả."""
+    po_number = (
+        f"{po_date.strftime('%d%m')}_{po_date.strftime('%Y')}_OQR_{short}"
     )
+
+    st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
     b1, b2, b3, _ = st.columns([2.5, 2.0, 1.5, 4.0])
 
-    # ── Pre-Order (PO+CI) ────────────────────────────────
+    # ── Pre-Order (PO + CI) ───────────────────────────────
     with b1:
-        current_params = (
-            str(items), po_date, short, deposit_pct, template_path
-        )
+        current_params = (str(items), po_date, short, deposit_pct, template_path)
 
-        if "sc_po_bytes" not in st.session_state:
-            st.session_state["sc_po_bytes"] = None
+        if "sc_po_bytes"  not in st.session_state:
+            st.session_state["sc_po_bytes"]  = None
             st.session_state["sc_po_params"] = None
 
         if st.session_state["sc_po_params"] != current_params:
@@ -446,100 +400,66 @@ def _render_export_buttons(
                 st.caption("⚠️ Chọn template để tiếp tục")
             elif st.button(
                 "▶ Chuẩn bị file Pre-Order",
-                help="Tạo file và tự động lưu vào Database",
+                help="Tạo file Excel và lưu vào Database",
                 key="sc_prepare_btn",
                 use_container_width=True,
             ):
-                with st.spinner("Đang xử lý & Sync DB…"):
-                    # 1. Tạo Excel + Trích xuất sync data
+                with st.spinner("Đang xử lý…"):
                     b, sync_data = _build_pre_order_bytes(
-                        template_path,
-                        items,
-                        po_date,
+                        template_path, items, po_date,
                         vendor_row.to_dict() if vendor_row is not None else {},
                         deposit_pct,
                     )
-                    
-                    if b:
-                        # Success generating file
-                        st.session_state["sc_po_bytes"] = b
-                        st.session_state["sc_po_params"] = current_params
-                        
-                        # 2. DEBUG: Hiển thị dữ liệu trích xuất để kiểm tra
-                        st.write("🔍 **Dữ liệu trích xuất từ CI** (Dùng để Sync DB)")
-                        # Đảm bảo hiển thị đúng cột, không bị swap
-                        cols_to_show = ["Description", "Barcode", "Qty", "Unit Price", "Amount", "Deposit"]
-                        st.dataframe(
-                            pd.DataFrame(sync_data)[cols_to_show], 
-                            use_container_width=True,
-                            hide_index=True
-                        )
-                        
-                        found = sum(1 for it in sync_data if it.get('Unit Price', 0) > 0)
-                        st.info(f"📊 Tìm thấy {found}/{len(sync_data)} sản phẩm có đơn giá.")
-                        
-                        # 3. Tự động Sync DB
-                        vid = vendor_row["id"] if vendor_row is not None else 0
-                        result = _save_to_db(sync_data, po_number, int(vid))
-                        
-                        if result:
-                            st.session_state["sc_sync_result"] = result
-                            st.toast(f"✅ Thành công! Đã tạo file & Sync DB.")
-                            st.rerun()
-                        else:
-                            st.error("Dữ liệu chưa được lưu vào Database nên không thể xuất file. "
-                                     "Vui lòng kiểm tra lại bảng giá trong template.")
+
+                if b:
+                    st.session_state["sc_po_bytes"]  = b
+                    st.session_state["sc_po_params"] = current_params
+
+                    vid    = vendor_row["id"] if vendor_row is not None else 0
+                    result = _save_to_db(sync_data, po_number, int(vid))
+
+                    if result:
+                        st.session_state["sc_sync_result"] = result
+                        st.rerun()
                     else:
-                        st.caption("⚠ Lỗi tạo file Excel")
+                        st.error(
+                            "Dữ liệu chưa được lưu vào Database. "
+                            "Kiểm tra bảng giá trong template."
+                        )
+                else:
+                    st.caption("⚠ Lỗi tạo file Excel")
         else:
             st.download_button(
                 "⬇ Tải Pre-Order (PO+CI)",
                 data=st.session_state["sc_po_bytes"],
                 file_name=f"{po_number}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                mime=(
+                    "application/vnd.openxmlformats-officedocument"
+                    ".spreadsheetml.sheet"
+                ),
                 use_container_width=True,
             )
-
-    # --- DIAGNOSTIC SECTION ---
-    if template_path and os.path.exists(template_path):
-        with st.expander("🛠️ Kiểm tra dữ liệu Template (Dùng để Debug)", expanded=False):
-            st.caption("Đây là danh sách giá mà hệ thống đọc được từ sheet 'master data'.")
-            try:
-                from modules.export_pre_order import get_master_prices_from_file, normalize_key
-                pm = get_master_prices_from_file(template_path)
-                
-                if pm:
-                    # Show first 20 entries
-                    debug_df = pd.DataFrame([
-                        {"Key hệ thống nhận diện": k, "Giá": v} 
-                        for k, v in list(pm.items())[:20]
-                    ])
-                    st.table(debug_df)
-                    
-                    # Test tool
-                    st.divider()
-                    test_txt = st.text_input("Thử nhập tên sản phẩm để kiểm tra khớp:", "")
-                    if test_txt:
-                        n_key = normalize_key(test_txt)
-                        price = pm.get(n_key, 0)
-                        st.code(f"Key chuẩn hóa: {n_key} | Giá tìm thấy: {price}")
-                else:
-                    st.warning("⚠️ Không tìm thấy sheet 'master data' hoặc sheet đang trống.")
-            except Exception as e:
-                st.error(f"Lỗi debug: {e}")
 
     # ── Plain Excel ───────────────────────────────────────
     with b2:
         st.download_button(
             "⬇ Xuất Excel (plain)",
-            data=df_to_excel_bytes(
-                _build_plain_df(items), "PreOrder"
-            ),
+            data=df_to_excel_bytes(_build_plain_df(items), "PreOrder"),
             file_name=f"plain_{po_number}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            mime=(
+                "application/vnd.openxmlformats-officedocument"
+                ".spreadsheetml.sheet"
+            ),
             use_container_width=True,
         )
 
+    # ── Xóa tất cả ───────────────────────────────────────
+    with b3:
+        if st.button("🗑 Xóa tất cả", use_container_width=True, type="secondary"):
+            clear_all()
+            st.session_state["sc_po_bytes"]  = None
+            st.session_state["sc_po_params"] = None
+            st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -550,18 +470,13 @@ def render() -> None:
     """Render toàn bộ section bảng Pre-Order."""
     _init()
 
-    # 1. Thông tin PO
-    po_date, vendor_row, short, deposit_pct, template_path = (
-        _render_order_info()
-    )
+    po_date, vendor_row, short, deposit_pct, template_path = _render_order_info()
 
     st.markdown(divider(), unsafe_allow_html=True)
-    
-    # 2. Danh sách sản phẩm
+
     items = st.session_state[_KEY]
     _render_product_list(items)
 
-    # 4. Export buttons (chỉ hiện khi có sản phẩm)
     if items:
         _render_export_buttons(
             items, po_date, short, deposit_pct, template_path, vendor_row
