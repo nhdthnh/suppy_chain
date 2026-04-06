@@ -1,15 +1,29 @@
-"""db/queries.py — Toàn bộ câu SQL dùng chung."""
+"""
+db/queries.py — Tất cả câu SQL dùng chung.
+
+Cache strategy:
+  · list_tables / list_columns : TTL 120s (ít thay đổi)
+  · count_rows                 : TTL 30s
+  · search_products            : TTL 15s
+  · fetch_page                 : TTL 20s
+  · show_spinner=False         : tránh flash UI khi cache hit
+"""
+
+import warnings
 
 import pandas as pd
 import streamlit as st
-import warnings
 from mysql.connector import Error
+
 from db.connection import ensure_connected
 
 
-# ── Generic ───────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# GENERIC QUERY / EXECUTE
+# ─────────────────────────────────────────────────────────────
 
 def query(sql: str, params=None) -> pd.DataFrame:
+    """Chạy SELECT query, trả về DataFrame."""
     try:
         conn = ensure_connected()
         with warnings.catch_warnings():
@@ -21,6 +35,7 @@ def query(sql: str, params=None) -> pd.DataFrame:
 
 
 def execute(sql: str, params=None) -> bool:
+    """Chạy INSERT/UPDATE/DELETE, trả về True nếu thành công."""
     try:
         conn = ensure_connected()
         cur = conn.cursor()
@@ -34,6 +49,7 @@ def execute(sql: str, params=None) -> bool:
 
 
 def executemany(sql: str, data: list) -> int:
+    """Chạy batch INSERT, trả về số dòng affected."""
     try:
         conn = ensure_connected()
         cur = conn.cursor()
@@ -47,37 +63,59 @@ def executemany(sql: str, data: list) -> int:
         return 0
 
 
-# ── Schema ────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# SCHEMA
+# ─────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=120, show_spinner=False)
 def list_tables() -> list[str]:
+    """Danh sách bảng — cache 2 phút."""
     df = query("SHOW TABLES")
     return df.iloc[:, 0].tolist() if not df.empty else []
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=120, show_spinner=False)
 def list_columns(table: str) -> list[str]:
+    """Danh sách cột — cache 2 phút."""
     df = query(f"SHOW COLUMNS FROM `{table}`")
     return df["Field"].tolist() if not df.empty else []
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=30, show_spinner=False)
 def count_rows(table: str) -> int:
+    """Đếm dòng — cache 30 giây."""
     df = query(f"SELECT COUNT(*) AS n FROM `{table}`")
     return int(df.iloc[0, 0]) if not df.empty else 0
 
 
-# ── Search ────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# SEARCH
+# ─────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=20)
-def search_products(table: str, keyword: str, search_cols: list[str], limit: int = 50) -> pd.DataFrame:
+@st.cache_data(ttl=15, show_spinner=False)
+def search_products(
+    table: str,
+    keyword: str,
+    search_cols: list[str],
+    limit: int = 50,
+) -> pd.DataFrame:
+    """Tìm kiếm sản phẩm theo keyword — cache 15 giây."""
     if not keyword.strip() or not search_cols:
         return pd.DataFrame()
-    where  = " OR ".join([f"`{c}` LIKE %s" for c in search_cols])
+    where = " OR ".join([f"`{c}` LIKE %s" for c in search_cols])
     params = tuple(f"%{keyword}%" for _ in search_cols)
-    return query(f"SELECT * FROM `{table}` WHERE {where} LIMIT {limit}", params)
+    return query(
+        f"SELECT * FROM `{table}` WHERE {where} LIMIT {limit}", params
+    )
 
 
-@st.cache_data(ttl=30)
-def fetch_page(table: str, limit: int = 100, offset: int = 0) -> pd.DataFrame:
+# ─────────────────────────────────────────────────────────────
+# PAGINATION
+# ─────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=20, show_spinner=False)
+def fetch_page(
+    table: str, limit: int = 100, offset: int = 0
+) -> pd.DataFrame:
+    """Lấy trang dữ liệu — cache 20 giây."""
     return query(f"SELECT * FROM `{table}` LIMIT {limit} OFFSET {offset}")

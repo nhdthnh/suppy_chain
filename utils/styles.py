@@ -1,209 +1,246 @@
-"""utils/styles.py — CSS toàn cục + HTML helpers."""
+"""
+utils/styles.py — Modern Premium UI Design System.
+
+Design Tokens:
+- Typography: Inter (UI/Text), JetBrains Mono (Codes)
+- Color Palette:
+    - Primary: #10b981 (Emerald-500)
+    - Text Main: #0f172a (Slate-900)
+    - Surface: #f8fafc (Slate-50)
+- Accents: Low-alpha shadows, subtle border glows
+"""
+
+# ─────────────────────────────────────────────────────────────
+# GLOBAL CSS
+# ─────────────────────────────────────────────────────────────
 
 GLOBAL_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-html, body, [class*="css"] { font-family: 'IBM Plex Sans', sans-serif; }
+/* ═══════════════════════════════════════════════════════════
+   1. BASE TYPOGRAPHY & SMOOTHING
+   ═══════════════════════════════════════════════════════════ */
 
-/* ── Sidebar ── */
+:root {
+    --primary: #10b981;
+    --primary-hover: #059669;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --bg-surface: #f8fafc;
+    --border-subtle: rgba(226, 232, 240, 0.8);
+}
+
+html, body, [class*="css"], .stApp {
+    font-family: 'Inter', sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2. MAIN CONTENT LAYOUT
+   ═══════════════════════════════════════════════════════════ */
+
+.main .block-container {
+    padding: 3rem 4rem !important;
+    max-width: 1300px !important;
+}
+
+header[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   3. SIDEBAR UPGRADE
+   ═══════════════════════════════════════════════════════════ */
+
 section[data-testid="stSidebar"] {
-    background: #0d0d0d !important;
-    border-right: 1px solid #1c1c1c;
-}
-section[data-testid="stSidebar"] > div { padding-top: 1.5rem; }
-section[data-testid="stSidebar"] * { color: #c8c8c8 !important; }
-section[data-testid="stSidebar"] hr { border-color: #262626 !important; }
-
-/* Nav radio buttons */
-section[data-testid="stSidebar"] .stRadio > div {
-    gap: 0 !important;
-}
-section[data-testid="stSidebar"] .stRadio label {
-    font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 0.78rem !important;
-    letter-spacing: 0.06em;
-    padding: 0.55rem 0.8rem !important;
-    border-radius: 0 !important;
-    display: block;
-    width: 100%;
-    transition: background 0.15s;
-}
-section[data-testid="stSidebar"] .stRadio label:hover {
-    background: #1a1a1a !important;
-}
-/* hide the radio dot */
-section[data-testid="stSidebar"] .stRadio [data-baseweb="radio"] > div:first-child {
-    display: none !important;
+    background: #ffffff !important;
+    border-right: 1px solid var(--border-subtle) !important;
+    box-shadow: 2px 0 10px rgba(15, 23, 42, 0.02) !important;
 }
 
-/* ── Page header ── */
+section[data-testid="stSidebar"] > div:first-child {
+    padding: 1.5rem 1.2rem !important;
+}
+
+/* Radio nav menu as Pills */
+section[data-testid="stSidebar"] div[role="radiogroup"] {
+    gap: 8px !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"] {
+    font-size: 0.92rem !important;
+    font-weight: 500 !important;
+    padding: 0.65rem 1rem !important;
+    border-radius: 12px !important;
+    color: #475569 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid transparent !important;
+}
+
+/* Hover state */
+section[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"]:hover {
+    background: #f1f5f9 !important;
+    color: var(--text-main) !important;
+}
+
+/* Active state with pill effect and left accent */
+section[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"]:has(input:checked) {
+    background: #f0fdf4 !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08) !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"]:has(input:checked) p,
+section[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"]:has(input:checked) span {
+    color: #065f46 !important;
+    font-weight: 600 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   4. PREMIUM PAGE HEADER
+   ═══════════════════════════════════════════════════════════ */
+
 .page-tag {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
-    color: #aaa;
-    text-transform: uppercase;
-    margin-bottom: 0.1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--primary);
+    background: #ecfdf5;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 0.75rem;
 }
+
 .page-title {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #111;
-    border-bottom: 2px solid #111;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1.6rem;
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-main);
+    margin-bottom: 2rem;
 }
 
-/* ── Section label ── */
-.section-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
-    color: #999;
-    text-transform: uppercase;
-    margin-bottom: 0.6rem;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
+/* ═══════════════════════════════════════════════════════════
+   5. MODERN METRIC CARD
+   ═══════════════════════════════════════════════════════════ */
 
-/* ── Metric card ── */
 .metric-card {
-    border: 1px solid #e4e4e4;
-    padding: 0.85rem 1.1rem;
-    background: #fafafa;
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+                0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-left: 4px solid var(--primary);
 }
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+}
+
 .metric-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.58rem;
-    letter-spacing: 0.16em;
-    color: #aaa;
-    text-transform: uppercase;
-}
-.metric-value {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.65rem;
-    font-weight: 600;
-    color: #111;
-    line-height: 1.2;
-}
-
-/* ── Suggestion buttons ── */
-div[data-testid="stButton"] > button[kind="secondary"] {
-    font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 0.78rem !important;
-    text-align: left !important;
-    border-radius: 0 !important;
-    border: 1px solid #e8e8e8 !important;
-    background: #fff !important;
-    color: #222 !important;
-    padding: 0.45rem 0.9rem !important;
-    margin-bottom: 2px !important;
-    transition: background 0.1s !important;
-    justify-content: flex-start !important;
-}
-div[data-testid="stButton"] > button[kind="secondary"]:hover {
-    background: #f4f4f4 !important;
-    border-color: #ccc !important;
-}
-
-/* ── Primary buttons ── */
-.stButton > button[kind="primary"],
-.stButton > button {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.06em;
-    border-radius: 0 !important;
-    border: 1px solid #111 !important;
-    background: #111 !important;
-    color: #fff !important;
-}
-.stButton > button:hover { background: #333 !important; }
-
-.stDownloadButton > button {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.06em;
-    border-radius: 0 !important;
-    border: 1px solid #111 !important;
-    background: #fff !important;
-    color: #111 !important;
-}
-.stDownloadButton > button:hover { background: #f0f0f0 !important; }
-
-/* ── Inputs ── */
-.stTextInput > div > div > input {
-    border-radius: 0 !important;
-    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.85rem;
-    border: 1px solid #d0d0d0 !important;
-}
-.stTextInput > div > div > input:focus {
-    border-color: #111 !important;
-    box-shadow: none !important;
-}
-.stNumberInput > div > div > input {
-    border-radius: 0 !important;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.82rem;
-}
-.stMultiSelect > div > div {
-    border-radius: 0 !important;
-    font-size: 0.82rem;
-}
-.stSelectbox > div > div {
-    border-radius: 0 !important;
-    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
 }
 
-/* ── Table ── */
-div[data-testid="stDataFrame"] { border: 1px solid #e4e4e4; }
-
-/* ── Divider ── */
-.sc-divider {
-    border: none;
-    border-top: 1px solid #e8e8e8;
-    margin: 1.2rem 0;
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-main);
 }
 
-/* ── Hide Default Multipage Nav ── */
-[data-testid="stSidebarNavLink"], [data-testid="stSidebarNav"] {
+/* ═══════════════════════════════════════════════════════════
+   6. TABLES & INPUTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Table refinements */
+div[data-testid="stDataFrame"] table,
+div[data-testid="stDataEditor"] table {
+    border-radius: 8px !important;
+    overflow: hidden !important;
+}
+
+/* Modern Inputs */
+.stTextInput input, .stSelectbox [role="combobox"] {
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 0.75rem !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   7. HIDE DEFAULTS
+   ═══════════════════════════════════════════════════════════ */
+
+[data-testid="stSidebarNav"], 
+[data-testid="stSidebarNavItems"], 
+[data-testid="stSidebarNavLink"],
+.stDeployButton, #MainMenu, footer {
     display: none !important;
 }
+
+[data-testid="stCollapsedControl"] {
+    display: flex !important;
+}
+
 </style>
 """
 
+HIDE_SIDEBAR_CSS = """
+<style>
+    [data-testid="stSidebar"], [data-testid="stCollapsedControl"] { display: none !important; }
+    .main .block-container { max-width: 800px !important; padding-top: 6rem !important; }
+</style>
+"""
 
-# ── HTML helpers ──────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# HTML HELPERS
+# ─────────────────────────────────────────────────────────────
 
 def page_header(tag: str, title: str) -> str:
-    return (
-        f'<div class="page-tag">{tag}</div>'
-        f'<div class="page-title">{title}</div>'
-    )
-
-
-def section_label(icon: str, text: str) -> str:
-    return f'<div class="section-label">{icon} {text}</div>'
-
+    """Enhanced page header."""
+    return f'''
+    <div class="page-tag">{tag}</div>
+    <div class="page-title">{title}</div>
+    '''
 
 def metric_card(label: str, value: str) -> str:
-    return (
-        f'<div class="metric-card">'
-        f'<div class="metric-label">{label}</div>'
-        f'<div class="metric-value">{value}</div>'
-        f'</div>'
-    )
+    """Premium Metric Card."""
+    return f'''
+    <div class="metric-card">
+        <div class="metric-label">{label}</div>
+        <div class="metric-value">{value}</div>
+    </div>
+    '''
 
+def section_label(icon: str, text: str) -> str:
+    """Sleek section label."""
+    return f'''
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:1rem; 
+                font-size:0.9rem; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:0.02em;">
+        <span>{icon}</span>
+        <span>{text}</span>
+    </div>
+    '''
 
-def mono(text: str, size: str = "0.72rem", color: str = "#888") -> str:
-    return (
-        f'<span style="font-family:\'IBM Plex Mono\',monospace;'
-        f'font-size:{size};color:{color};">{text}</span>'
-    )
+def divider(margin: str = "2rem 0") -> str:
+    """Refined divider."""
+    return f'<hr style="border:none; border-top:1px solid #f1f5f9; margin:{margin};" />'
 
-
-def divider(height: str = "1px", color: str = "#e8e8e8", margin: str = "1rem 0") -> str:
-    return f'<hr class="sc-divider" style="height:{height};border-top:1px solid {color};margin:{margin};" />'
+def badge(text: str, is_active: bool = True) -> str:
+    """Modern Badge."""
+    color = "#10b981" if is_active else "#94a3b8"
+    bg = "#ecfdf5" if is_active else "#f1f5f9"
+    return f'''
+    <span style="font-size:0.75rem; font-weight:600; color:{color}; background:{bg}; 
+                 padding:4px 12px; border-radius:100px; border:1px solid rgba(0,0,0,0.02);">
+        {text}
+    </span>
+    '''

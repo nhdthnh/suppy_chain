@@ -1,64 +1,153 @@
 """
-components/sidebar.py
-Sidebar navigation độc lập.
-render() → trả về page key để app.py route.
+components/sidebar.py — Sidebar navigation component.
+
+Features:
+- Logo with premium typography
+- Real-time DB connection status badge
+- Custom-styled radio nav for page routing
+- Integrated user profile and logout
 """
 
 import streamlit as st
 from datetime import datetime
 from db.connection import connection_status
 
+
+# ─────────────────────────────────────────────────────────────
+# CONSTANTS
+# ─────────────────────────────────────────────────────────────
+
 NAV_ITEMS: list[tuple[str, str]] = [
-    ("📋  PRE-ORDER",      "search_order"),
-    ("🗄   DỮ LIỆU BẢNG",  "data_browser"),
-    ("⬆   IMPORT EXCEL",  "import_excel"),
-    ("⬇   EXPORT EXCEL",  "export_excel"),
-    ("📄   XEM TEMPLATES", "view_templates"),
+    ("📋  PRE-ORDER",       "search_order"),
+    ("🗄   DỮ LIỆU BẢNG",   "data_browser"),
+    ("⬆   IMPORT EXCEL",   "import_excel"),
+    ("⬇   EXPORT EXCEL",   "export_excel"),
+    ("📄   XEM TEMPLATES",  "view_templates"),
+    ("ℹ️   ABOUT",         "about"),
 ]
 
+_NAV_KEY = "_sidebar_nav_idx"
+_APP_VERSION = "v1.0"
+
+
+# ─────────────────────────────────────────────────────────────
+# PRIVATE UI PIECES
+# ─────────────────────────────────────────────────────────────
 
 def _logo() -> None:
+    """Render logo: tên app + tên công ty với typography mới."""
     st.markdown(
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-weight:600;'
-        'font-size:0.95rem;letter-spacing:0.08em;color:#e0e0e0;padding:0 0.2rem 0.2rem;">'
-        '📦 SUPPLY CHAIN</div>',
+        '''
+        <div style="margin-bottom: 24px;">
+            <div style="font-family:'Inter', sans-serif; font-weight:800; font-size:1.5rem; color:#0f172a; 
+                        display:flex; align-items:center; gap:8px;">
+                <span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 8px;">🛒</span> 
+                CUNG ỨNG
+            </div>
+            <div style="font-family:'Inter', sans-serif; font-size:0.75rem; font-weight:600; 
+                        color:#64748b; letter-spacing:0.1em; text-transform:uppercase; margin-top:4px;">
+                OQR Co.Ltd
+            </div>
+        </div>
+        ''',
         unsafe_allow_html=True,
     )
 
 
 def _connection_badge() -> None:
-    is_ok, label = connection_status()
-    color = "#22c55e" if is_ok else "#ef4444"
+    """Render DB connection status with emerald tokens."""
+    is_ok, _ = connection_status()
+
+    if is_ok:
+        label, color, bg = "CONNECTED", "#059669", "#ecfdf5"
+    else:
+        label, color, bg = "DISCONNECTED", "#dc2626", "#fef2f2"
+
     st.markdown(
-        f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.65rem;'
-        f'letter-spacing:0.12em;color:{color};padding:0 0.2rem;">● {label}</div>',
+        f'''
+        <div style="font-family:'Inter', sans-serif; font-size:0.7rem; font-weight:700; 
+                    color:{color}; background:{bg}; border:1px solid rgba(0,0,0,0.03); 
+                    padding:4px 12px; border-radius:100px; display:inline-flex; align-items:center; gap:6px;">
+            <span style="font-size:0.8rem;">●</span> DB {label}
+        </div>
+        ''',
         unsafe_allow_html=True,
     )
 
 
-def _footer() -> None:
+def _user_info() -> None:
+    """Render user indicator with simplified UI."""
+    username = st.session_state.get("username", "User")
     st.markdown(
-        f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.55rem;'
-        f'color:#3a3a3a;padding:0.2rem;">'
-        f'supply_chain · {datetime.now().strftime("%d/%m/%Y %H:%M")}</div>',
+        f'''
+        <div style="margin-bottom: 12px;">
+            <div style="font-family:'Inter', sans-serif; font-size:0.8rem; font-weight:500; color:#64748b;">
+                Tài khoản hiện tại
+            </div>
+            <div style="font-family:'Inter', sans-serif; font-size:0.95rem; font-weight:700; color:#0f172a;">
+                {username}
+            </div>
+        </div>
+        ''',
         unsafe_allow_html=True,
     )
 
+
+def _version_stamp() -> None:
+    """Render subtle version and timestamp info."""
+    now = datetime.now().strftime("%d/%m %H:%M")
+    st.markdown(
+        f'''
+        <div style="font-family:'JetBrains Mono', monospace; font-size:0.6rem; color:#94a3b8; 
+                    margin-top:20px; border-top:1px solid #f1f5f9; padding-top:12px;">
+            VER {_APP_VERSION} ∙ SYNC {now}
+        </div>
+        ''',
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# PUBLIC RENDERER
+# ─────────────────────────────────────────────────────────────
 
 def render() -> str:
-    """Render sidebar, trả về key của page được chọn."""
+    """Render sidebar and return active page key."""
     labels = [lbl for lbl, _ in NAV_ITEMS]
-    keys   = [key for _, key in NAV_ITEMS]
+    keys = [key for _, key in NAV_ITEMS]
+
+    if _NAV_KEY not in st.session_state:
+        st.session_state[_NAV_KEY] = 0
 
     with st.sidebar:
         _logo()
-        st.markdown('<hr style="border-color:#1e1e1e;margin:0.7rem 0;">', unsafe_allow_html=True)
         _connection_badge()
-        st.markdown('<hr style="border-color:#1e1e1e;margin:0.7rem 0;">', unsafe_allow_html=True)
+        
+        st.markdown('<div style="margin-top:24px;"></div>', unsafe_allow_html=True)
+        
+        # Dashboard Navigation
+        selected = st.radio(
+            "Navigation",
+            labels,
+            index=st.session_state[_NAV_KEY],
+            label_visibility="collapsed",
+            key="_sidebar_radio",
+        )
 
-        selected = st.radio("nav", labels, index=0, label_visibility="collapsed")
+        new_idx = labels.index(selected)
+        st.session_state[_NAV_KEY] = new_idx
 
-        st.markdown('<hr style="border-color:#1e1e1e;margin:0.7rem 0;">', unsafe_allow_html=True)
-        _footer()
+        # Push to bottom safely with margin
+        st.markdown('<div style="margin-top:2.5rem;"></div>', unsafe_allow_html=True)
+        
+        _user_info()
 
-    return keys[labels.index(selected)]
+        if st.button("🚪 Đăng xuất", use_container_width=True, type="secondary", key="_logout_btn"):
+            st.session_state["authenticated"] = False
+            st.session_state["username"] = None
+            st.query_params.clear()
+            st.rerun()
+
+        _version_stamp()
+
+    return keys[new_idx]
